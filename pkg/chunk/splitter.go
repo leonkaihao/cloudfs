@@ -2,7 +2,6 @@ package chunk
 
 import (
 	"context"
-	"crypto/md5"
 	"io"
 )
 
@@ -15,69 +14,36 @@ type Splitter struct {
 }
 
 func NewSplitter(maxSliceSize int) *Splitter {
+	if maxSliceSize == 0 {
+		maxSliceSize = DefaultSliceSize
+	}
 	return &Splitter{
 		MaxSliceSize: maxSliceSize,
 	}
 }
 
-func (spltr *Splitter) SplitMemData(ctx context.Context, data []byte, startSeq int64) (<-chan *Slice, <-chan error) {
-	slices := make(chan *Slice)
+func (spltr *Splitter) Split(ctx context.Context, reader io.Reader) (<-chan []byte, <-chan error) {
+	slices := make(chan []byte)
 	errChan := make(chan error)
 	go func() {
 		defer close(slices)
-		index := startSeq
-		for start := 0; start < len(data); start += spltr.MaxSliceSize {
-			end := start + spltr.MaxSliceSize
-			if end > len(data) {
-				end = len(data)
-			}
-			dataSeg := data[start:end]
-			hashValue := md5.New().Sum(dataSeg)
-			slice, err := NewSlice(index, dataSeg, hashValue)
+		defer close(errChan)
+		for {
+			buf := make([]byte, spltr.MaxSliceSize)
+			n, err := reader.Read(buf)
 			if err != nil {
-				errChan <- err
-				return
-			}
-			index++
-
-			select {
-			case slices <- slice:
-			case <-ctx.Done():
-				errChan <- ctx.Err()
-				return
-			}
-		}
-	}()
-	return slices, errChan
-}
-
-func (spltr *Splitter) SplitIOData(ctx context.Context, reader io.Reader, startSeq int64) (<-chan *Slice, <-chan error) {
-	slices := make(chan *Slice)
-	errChan := make(chan error)
-	go func() {
-		defer close(slices)
-		buf := make([]byte, spltr.MaxSliceSize)
-		index := startSeq
-		_, err := reader.Read(buf)
-		for err != nil {
-			hashValue := md5.New().Sum(buf)
-
-			slice, err := NewSlice(index, buf, hashValue)
-			if err != nil {
-				errChan <- err
+				if err != io.EOF {
+					errChan <- err
+				}
 				return
 			}
 
 			select {
-			case slices <- slice:
+			case slices <- buf[:n]:
 			case <-ctx.Done():
 				errChan <- ctx.Err()
 				return
 			}
-
-			index++
-			buf = make([]byte, spltr.MaxSliceSize)
-			_, err = reader.Read(buf)
 		}
 	}()
 
