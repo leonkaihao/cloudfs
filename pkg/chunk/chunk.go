@@ -2,13 +2,19 @@ package chunk
 
 import (
 	"bytes"
-	"crypto/md5"
-	"io"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
+	"github.com/leonkaihao/cloudfs/pkg/utils"
 )
+
+type ChunkHeader struct {
+	ID        uuid.UUID // used for identifying a chunk
+	CreateAt  time.Time // create time
+	Size      int64     // chunk size
+	HashValue []byte    // 16 bytes hash for the whole chunk
+}
 
 type Chunk struct {
 	ChunkHeader
@@ -29,34 +35,27 @@ func NewChunk(size int64, sliceCount int64, hashValue []byte) (*Chunk, error) {
 
 func (chk *Chunk) AddSlice(slice *Slice) error {
 	if err := slice.Verify(); err != nil {
-		return &ChunkError{ErrAddSliceToChunk, err}
+		return fmt.Errorf("%w: %v", ErrAddSliceToChunk, err)
 	}
 	if chk.slices[slice.Seq] != nil {
-		return &ChunkError{
-			ErrAddSliceToChunk,
-			errors.Errorf("Slice %v has already been used", slice.Seq),
-		}
+		return fmt.Errorf("%w: slice %v has already been used", ErrAddSliceToChunk, slice.Seq)
 	}
 	chk.slices[slice.Seq] = slice
 	return nil
 }
 
 func (chk *Chunk) CheckHashValue() error {
-	h := md5.New()
+	enc := utils.NewEncoder()
 	for i, slice := range chk.slices {
 		if slice == nil {
-			return &ChunkError{
-				ErrCheckChunkHashValue,
-				errors.Errorf("Slice %v cannot be nil when calculating chunk hash value", i),
-			}
+			return fmt.Errorf("%w: slice %v cannot be nil when calculating chunk hash value", ErrCheckChunkHashValue, i)
 		}
-		io.WriteString(h, string(slice.Data))
+		if err := enc.Consume(slice.Data); err != nil {
+			return fmt.Errorf("%w: cannot consume slice %v", ErrCheckChunkHashValue, i)
+		}
 	}
-	if bytes.Compare(h.Sum(nil), chk.HashValue) != 0 {
-		return &ChunkError{
-			ErrCheckChunkHashValue,
-			errors.Errorf("Chunk %v has MD5 checksum error", chk.ID),
-		}
+	if bytes.Compare(enc.Hash(), chk.HashValue) != 0 {
+		return fmt.Errorf("%w: chunk %v has MD5 checksum error", ErrCheckChunkHashValue, chk.ID)
 	}
 	return nil
 }

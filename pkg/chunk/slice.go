@@ -8,9 +8,24 @@ import (
 	"github.com/pkg/errors"
 )
 
+type SliceHeader struct {
+	ID        uuid.UUID // used for identifying a slice
+	Size      int32     // slice size
+	Seq       int64     // sequence number of the slice in a chunk
+	HashValue []byte    // 16 bytes hash for the slice
+
+	Metadata map[string]interface{} // can include like partitionID
+}
+type SliceData struct {
+	Data []byte
+}
+type SliceStorage struct {
+	Path string
+}
 type Slice struct {
 	SliceHeader
-	Data []byte
+	SliceData
+	SliceStorage
 }
 
 func NewSlice(seq int64, data []byte, hashValue []byte) (*Slice, error) {
@@ -22,7 +37,9 @@ func NewSlice(seq int64, data []byte, hashValue []byte) (*Slice, error) {
 			HashValue: hashValue,
 			Metadata:  make(map[string]interface{}),
 		},
-		Data: data,
+		SliceData: SliceData{
+			Data: data,
+		},
 	}, nil
 }
 
