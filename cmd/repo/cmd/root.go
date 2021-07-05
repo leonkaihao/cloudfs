@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"github.com/leonkaihao/cloudfs/cmd/repo/cmd/parse"
+	"github.com/leonkaihao/cloudfs/cmd/repo/cmd/query"
 	"github.com/spf13/cobra"
 )
 
@@ -19,5 +21,17 @@ func Execute() error {
 
 func init() {
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(historyCmd)
+
+	parseCmd.AddCommand(parse.DirCmd)
+	parseCmd.AddCommand(parse.FileCmd)
 	rootCmd.AddCommand(parseCmd)
+
+	queryCmd.AddCommand(query.HashCmd)
+	queryCmd.AddCommand(query.PathCmd)
+	rootCmd.AddCommand(queryCmd)
+
+	rootCmd.AddCommand(removeCmd)
+	rootCmd.AddCommand(serveCmd)
+	rootCmd.AddCommand(watchCmd)
 }
