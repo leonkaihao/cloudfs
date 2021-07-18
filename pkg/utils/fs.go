@@ -13,6 +13,14 @@ import (
 
 type FS = afero.Fs
 
+func NewFs() FS {
+	return afero.NewOsFs()
+}
+
+func NewBaseFs(fs FS, path string) FS {
+	return afero.NewBasePathFs(fs, path)
+}
+
 func GetBaseFs(baseurl string) (FS, error) {
 	base, err := url.Parse(baseurl)
 	if err != nil {
@@ -30,7 +38,7 @@ func GetBaseFs(baseurl string) (FS, error) {
 	}
 }
 
-func NewAferoReadCloser(fs FS, path string) (io.ReadCloser, error) {
+func NewFileReadCloser(fs FS, path string) (io.ReadCloser, error) {
 	f, err := fs.OpenFile(path, os.O_RDONLY, 0755)
 	if err != nil {
 		return nil, err
@@ -38,7 +46,7 @@ func NewAferoReadCloser(fs FS, path string) (io.ReadCloser, error) {
 	return f, nil
 }
 
-func NewAferoWriteCloser(fs FS, path string) (io.WriteCloser, error) {
+func NewFileoWriteCloser(fs FS, path string) (io.WriteCloser, error) {
 	f, err := fs.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0755)
 	if err != nil {
 		return nil, err

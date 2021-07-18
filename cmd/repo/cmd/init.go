@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/leonkaihao/cloudfs/pkg/services"
+	"github.com/leonkaihao/cloudfs/pkg/repository"
 )
 
 var initCmd = &cobra.Command{
@@ -14,7 +14,6 @@ var initCmd = &cobra.Command{
 	Short: "Init the repo",
 	Long:  "Init the repo within a hidden .cfs folder in current directory",
 	Run: func(cmd *cobra.Command, args []string) {
-		svc := services.New()
 		var (
 			path string
 			err  error
@@ -22,8 +21,9 @@ var initCmd = &cobra.Command{
 		if path, err = os.Getwd(); err != nil {
 			log.Fatal(err)
 		}
-		if err = svc.Init(path); err != nil {
-			log.Fatal(err)
+		svc := repository.New(path)
+		if err = svc.Init(); err != nil {
+			log.Error(err)
 		}
 	},
 }
