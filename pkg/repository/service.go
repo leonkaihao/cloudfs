@@ -17,25 +17,31 @@ const (
 )
 
 type Service interface {
+	Table(name string) Table
 	Init() error
 	Load() error
-	Actions() Actions
-	Hashes() Hashes
-	Watches() Watches
 }
 
 type service struct {
 	fs       utils.FS
 	basePath string
 	db       *gorm.DB
+	tables   map[string]Table
 }
 
 func New(basePath string) Service {
 	svc := &service{
 		basePath: basePath,
 		fs:       utils.NewBaseFs(utils.NewFs(), basePath),
+		tables: map[string]Table{
+			ActionsTableName: nil,
+		},
 	}
 	return svc
+}
+
+func (svc *service) Table(name string) Table {
+	return svc.tables[name]
 }
 
 func (svc *service) Init() error {
@@ -57,18 +63,6 @@ func (svc *service) Init() error {
 
 func (svc *service) Load() error {
 	return svc.loadData()
-}
-
-func (svc *service) Actions() Actions {
-	return nil
-}
-
-func (svc *service) Hashes() Hashes {
-	return nil
-}
-
-func (svc *service) Watches() Watches {
-	return nil
 }
 
 // helper
@@ -128,6 +122,7 @@ func (svc *service) createData() error {
 	if err = svc.loadData(); err != nil {
 		return err
 	}
+
 	fmt.Println("Data created.")
 	return nil
 }
@@ -147,5 +142,6 @@ func (svc *service) loadData() error {
 		return fmt.Errorf("%v: %w", dataFilePath, err)
 	}
 	svc.db = db
+	svc.tables[ActionsTableName] = NewActions(db)
 	return nil
 }

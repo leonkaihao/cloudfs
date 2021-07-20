@@ -21,8 +21,8 @@ var initCmd = &cobra.Command{
 		if path, err = os.Getwd(); err != nil {
 			log.Fatal(err)
 		}
-		svc := repository.New(path)
-		if err = svc.Init(); err != nil {
+		repo := repository.New(path)
+		if err = repo.Init(); err != nil {
 			log.Error(err)
 		}
 	},
