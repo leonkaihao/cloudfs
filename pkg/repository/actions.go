@@ -36,6 +36,7 @@ type Actions interface {
 	Size(ctx context.Context) (int, error)
 	Add(ctx context.Context, name ActionType, params string, errInfo string) (int, error)
 	Items(ctx context.Context, maxCount int) ([]*ActionSchema, error)
+	Clean(ctx context.Context, from int, to int) error
 }
 
 type actions struct {
@@ -82,4 +83,21 @@ func (act *actions) Items(ctx context.Context, maxCount int) ([]*ActionSchema, e
 	result := act.tbl.WithContext(ctx).Order("ID desc").Limit(maxCount).Find(&history)
 	act.Add(ctx, ActionType("history"), fmt.Sprintf("maxCount=%v", maxCount), "")
 	return history, result.Error
+}
+
+func (act *actions) Clean(ctx context.Context, from int, to int) error {
+	if from == 0 && to == 0 {
+		// this is a SQLite statement, for other SQL version it should be `truncate table XXX`
+		result := act.tbl.WithContext(ctx).Exec("DELETE FROM " + ActionsTableName)
+		if result.Error != nil {
+			return result.Error
+		}
+		return nil
+	}
+
+	result := act.tbl.WithContext(ctx).Where("ID >= ? and ID <= ?", from, to).Delete(&ActionSchema{})
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
 }

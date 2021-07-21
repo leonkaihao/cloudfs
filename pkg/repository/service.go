@@ -20,6 +20,7 @@ type Service interface {
 	Table(name string) Table
 	Init() error
 	Load() error
+	Close() error
 }
 
 type service struct {
@@ -143,5 +144,9 @@ func (svc *service) loadData() error {
 	}
 	svc.db = db
 	svc.tables[ActionsTableName] = NewActions(db)
+	return nil
+}
+
+func (svc *service) Close() error {
 	return nil
 }
